@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Guessing Game</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .game {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 1.2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            padding: 0.8rem 1.2rem;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #0f3460;
+            color: #e0e0e0;
+            font-size: 1.3rem;
+            outline: none;
+            width: 240px;
+            text-align: center;
+        }
+
+        input:focus { border-color: #e94560; }
+
+        button {
+            padding: 0.8rem 1.8rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.3rem;
+            cursor: pointer;
+            background: #e94560;
+            color: #fff;
+            transition: background 0.15s;
+        }
+
+        button:hover { background: #c73652; }
+
+        .message {
+            text-align: center;
+            font-size: 1.6rem;
+            min-height: 2rem;
+            margin-bottom: 1rem;
+            transition: opacity 0.2s;
+        }
+
+        .message.low { color: #5dade2; }
+        .message.high { color: #f39c12; }
+        .message.win { color: #2ecc71; font-weight: bold; }
+        .message.error { color: #e94560; }
+
+        .attempts {
+            text-align: center;
+            color: #888;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .history {
+            max-height: 220px;
+            max-width: 600px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .history span {
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .history .low { background: #1a3a5c; }
+        .history .high { background: #5c3a1a; }
+        .history .win { background: #1a5c2e; }
+
+        .mute-btn {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: 1px solid #444;
+            color: #888;
+            font-size: 1.4rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .mute-btn:hover { border-color: #888; color: #e0e0e0; background: none; }
+    </style>
+</head>
+<body>
+    <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
+    <div class="game">
+        <h1>Number Guessing Game</h1>
+        <p class="subtitle">I'm thinking of a number between 1 and 100.</p>
+        <div class="input-row">
+            <input type="number" id="guess" min="1" max="100" placeholder="Enter your guess" autofocus>
+            <button id="btn">Guess</button>
+        </div>
+        <p class="message" id="message"></p>
+        <p class="attempts" id="attempts"></p>
+        <div class="history" id="history"></div>
+    </div>
+
+    <script>
+        let number = randomInt(1, 100);
+        let attempts = 0;
+        let gameOver = false;
+        let muted = false;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const guessInput = document.getElementById("guess");
+        const btn = document.getElementById("btn");
+        const messageEl = document.getElementById("message");
+        const attemptsEl = document.getElementById("attempts");
+        const historyEl = document.getElementById("history");
+        const muteBtn = document.getElementById("muteBtn");
+
+        btn.addEventListener("click", makeGuess);
+        guessInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") makeGuess();
+        });
+        muteBtn.addEventListener("click", () => {
+            muted = !muted;
+            muteBtn.textContent = muted ? "🔇" : "🔊";
+        });
+
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function playTone(freq, duration, type = "sine", volume = 0.3) {
+            if (muted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playLow() {
+            playTone(220, 0.3, "triangle");
+        }
+
+        function playHigh() {
+            playTone(520, 0.3, "triangle");
+        }
+
+        function playError() {
+            playTone(150, 0.15, "square", 0.15);
+            setTimeout(() => playTone(120, 0.2, "square", 0.15), 150);
+        }
+
+        function playWin() {
+            playTone(523, 0.15, "sine", 0.25);
+            setTimeout(() => playTone(659, 0.15, "sine", 0.25), 150);
+            setTimeout(() => playTone(784, 0.15, "sine", 0.25), 300);
+            setTimeout(() => playTone(1047, 0.4, "sine", 0.3), 450);
+        }
+
+        function makeGuess() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+
+            const value = guessInput.value.trim();
+            const guess = parseInt(value, 10);
+
+            if (!value || isNaN(guess) || guess < 1 || guess > 100) {
+                messageEl.textContent = "Please enter a number between 1 and 100.";
+                messageEl.className = "message error";
+                playError();
+                return;
+            }
+
+            attempts++;
+            guessInput.value = "";
+            guessInput.focus();
+
+            const tag = document.createElement("span");
+            tag.textContent = guess;
+
+            if (guess < number) {
+                messageEl.textContent = "Too low!";
+                messageEl.className = "message low";
+                tag.className = "low";
+                playLow();
+            } else if (guess > number) {
+                messageEl.textContent = "Too high!";
+                messageEl.className = "message high";
+                tag.className = "high";
+                playHigh();
+            } else {
+                const word = attempts === 1 ? "attempt" : "attempts";
+                messageEl.textContent = `Correct! You got it in ${attempts} ${word}.`;
+                messageEl.className = "message win";
+                tag.className = "win";
+                gameOver = true;
+                btn.textContent = "Play Again";
+                playWin();
+            }
+
+            historyEl.appendChild(tag);
+            attemptsEl.textContent = `Attempts: ${attempts}`;
+        }
+
+        function resetGame() {
+            number = randomInt(1, 100);
+            attempts = 0;
+            gameOver = false;
+            messageEl.textContent = "";
+            messageEl.className = "message";
+            attemptsEl.textContent = "";
+            historyEl.innerHTML = "";
+            btn.textContent = "Guess";
+            guessInput.focus();
+        }
+    </script>
+</body>
+</html>
