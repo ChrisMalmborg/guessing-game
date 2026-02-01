@@ -223,10 +223,11 @@
             align-items: center;
             z-index: 1000;
             opacity: 0;
+            pointer-events: none;
             transition: opacity 0.2s;
         }
 
-        .modal-overlay.visible { opacity: 1; }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
 
         .modal {
             background: #16213e;
@@ -488,8 +489,13 @@
                 if (!response.ok) throw new Error("API request failed");
 
                 const data = await response.json();
-                modalRating.textContent = data.rating;
-                modalAnalysis.textContent = data.analysis;
+                const { rating, strengths, tips, pattern } = data.analysis;
+                modalRating.textContent = rating;
+                let text = "";
+                if (strengths) text += `Strengths:\n${strengths}\n\n`;
+                if (pattern) text += `Pattern:\n${pattern}\n\n`;
+                if (tips) text += `Tips:\n${tips}`;
+                modalAnalysis.textContent = text.trim();
                 modalOverlay.classList.add("visible");
             } catch (err) {
                 modalRating.textContent = "Oops!";
