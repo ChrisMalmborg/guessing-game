@@ -428,17 +428,17 @@
                 messageEl.textContent = "Too low!";
                 messageEl.className = "message low";
                 tag.className = "low";
-                guessHistory.push({ guess, result: "low" });
+                guessHistory.push({ value: guess, result: "low" });
                 playLow();
             } else if (guess > number) {
                 messageEl.textContent = "Too high!";
                 messageEl.className = "message high";
                 tag.className = "high";
-                guessHistory.push({ guess, result: "high" });
+                guessHistory.push({ value: guess, result: "high" });
                 playHigh();
             } else {
                 const word = attempts === 1 ? "attempt" : "attempts";
-                guessHistory.push({ guess, result: "correct" });
+                guessHistory.push({ value: guess, result: "correct" });
                 if (highScore === null || attempts < highScore) {
                     highScore = attempts;
                     localStorage.setItem("highScore", highScore);
